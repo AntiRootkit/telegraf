@@ -1,30 +1,33 @@
-# Telegraf Input Plugin: VSphere
+# Telegraf Input Plugin: VMware vSphere
 
-This plugin gather datastores & vms metrics using VSphere Remote API.
+This plugin collects metrics from vCenter servers or standalone vSphere Hypervisor (ESXi) hosts.
 
-It collect the following metrics:
-
-- VMs CPU usage
-- VMs Memory usage
-- VMs Storage Usage
-- VMs Healthstatus
-- VMs count (Running, stopped, total)
-- Datastores space usage
-- ...
+- Virtual machines
+    - CPU usage
+    - Memory usage
+    - Storage usage
+    - Health status
+    - count (Running, stopped, total)
+- Datastores 
+    - Space usage
 
 ### Configuration:
 
 ```toml
-# Description
+# Collect metrics from VMware vSphere
 [[inputs.vsphere]]
-    ## FQDN or an IP of a vSphere Server or ESX system
-    server = ""
-    ## A ESX/Vsphere user with System.View and Performance.ModifyIntervals privileges
-    username = ""
-    ## Password for the above user
-    password = ""
-    ## When using self-signed certificates set this option to true
-    insecure =  true
+  ## FQDN or an IP of a vCenter Server or ESX host
+  server = "vcenter.domain.com"
+
+  ## A vSphere/ESX user
+  ## must have System.View and Performance.ModifyIntervals privileges
+  username = "root"
+
+  ## Password
+  password = "vmware"
+
+  ## Do not validate server's TLS certificate
+  # insecure =  true
 ```
 
 ### Measurements & Fields:
@@ -71,10 +74,6 @@ Every effort was made to preserve the names based on the JSON response from the 
 SELECT mean("host_mem_usage") FROM "vm_metrics" WHERE "name" =~ /^$VM$/ AND $timeFilter GROUP BY time($interval) fill(null) // Memory used
 SELECT mean("max_mem_usage") FROM "vm_metrics" WHERE "name" =~ /^$VM$/ AND $timeFilter GROUP BY time($interval) fill(null) // Max memory
 ```
-
-<p align="center">
-  <img src="grafana.png">
-</p>
 
 ### Example Output:
 

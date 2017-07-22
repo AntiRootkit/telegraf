@@ -24,25 +24,29 @@ type VSphere struct {
 }
 
 var sampleConfig = `
-	## FQDN or an IP of a vSphere Server or ESX system
-	# server = ""
-	## A ESX/Vsphere user with System.View and Performance.ModifyIntervals privileges
-	# username = ""
-	## Password for the above user
-	# password = ""
-	## When using self-signed certificates set this option to true
-	# insecure =  true
-	`
+  ## FQDN or an IP of a vCenter Server or ESXi host
+  server = "vcenter.domain.com"
+
+  ## A vSphere/ESX user
+  ## must have System.View and Performance.ModifyIntervals privileges
+  username = "root"
+
+  ## Password
+  password = "vmware"
+
+  ## Do not validate server's TLS certificate
+  # insecure =  true
+`
 
 func (v *VSphere) Description() string {
-	return "Gather VSphere metrics"
+	return "Collect metrics from VMware vSphere"
 }
 
 func (v *VSphere) SampleConfig() string {
 	return sampleConfig
 }
 
-func (v *VSphere) GatherDataStoreMetrics(acc telegraf.Accumulator, ctx context.Context, c *govmomi.Client, pc *property.Collector, dss []*object.Datastore) {
+func (v *VSphere) GatherDatastoreMetrics(acc telegraf.Accumulator, ctx context.Context, c *govmomi.Client, pc *property.Collector, dss []*object.Datastore) {
 	// Convert datastores into list of references
 	var refs []types.ManagedObjectReference
 	for _, ds := range dss {
@@ -152,7 +156,7 @@ func (v *VSphere) Gather(acc telegraf.Accumulator) error {
 		return err
 	}
 
-	v.GatherDataStoreMetrics(acc, ctx, c, pc, dss)
+	v.GatherDatastoreMetrics(acc, ctx, c, pc, dss)
 
 	// Find virtual machines in datacenter
 	vms, err := f.VirtualMachineList(ctx, "*")
