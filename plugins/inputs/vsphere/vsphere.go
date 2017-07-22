@@ -70,9 +70,9 @@ func (v *VSphere) gatherDatastoreMetrics(acc telegraf.Accumulator, ctx context.C
 		tags["url"] = ds.Summary.Url
 
 		records["capacity"] = ds.Summary.Capacity
-		records["freespace"] = ds.Summary.FreeSpace
+		records["free_space"] = ds.Summary.FreeSpace
 
-		acc.AddFields("ds_metrics", records, tags)
+		acc.AddFields("datastore", records, tags)
 	}
 }
 
@@ -96,30 +96,30 @@ func (v *VSphere) gatherVMMetrics(acc telegraf.Accumulator, ctx context.Context,
 		tags := make(map[string]string)
 
 		tags["name"] = vm.Name
-		tags["guest_full_name"] = vm.Config.GuestFullName
+		tags["guest_os_name"] = vm.Config.GuestFullName
 		tags["connection_state"] = string(vm.Summary.Runtime.ConnectionState)
-		tags["overall_status"] = string(vm.Summary.OverallStatus)
+		tags["health_status"] = string(vm.Summary.OverallStatus)
 		tags["vm_path_name"] = vm.Summary.Config.VmPathName
 		tags["ip_address"] = vm.Summary.Guest.IpAddress
 		tags["hostname"] = vm.Summary.Guest.HostName
-		tags["guest_id"] = vm.Config.GuestId
-		tags["is_guest_tools_running"] = vm.Summary.Guest.ToolsRunningStatus
+		tags["guest_os_id"] = vm.Config.GuestId
+		tags["guest_tools_running"] = vm.Summary.Guest.ToolsRunningStatus
 
-		records["mem_mb"] = vm.Config.Hardware.MemoryMB
-		records["num_cpu"] = vm.Config.Hardware.NumCPU
-		records["host_mem_usage"] = vm.Summary.QuickStats.HostMemoryUsage
-		records["guest_mem_usage"] = vm.Summary.QuickStats.GuestMemoryUsage
-		records["overall_cpu_usage"] = vm.Summary.QuickStats.OverallCpuUsage
-		records["overall_cpu_demand"] = vm.Summary.QuickStats.OverallCpuDemand
-		records["swap_mem"] = vm.Summary.QuickStats.SwappedMemory
-		records["uptime_sec"] = vm.Summary.QuickStats.UptimeSeconds
+		records["memory_granted"] = vm.Config.Hardware.MemoryMB
+		records["cpu_sockets"] = vm.Config.Hardware.NumCPU
+		records["memory_host_consumed"] = vm.Summary.QuickStats.HostMemoryUsage
+		records["memory_guest_active"] = vm.Summary.QuickStats.GuestMemoryUsage
+		records["cpu_usage"] = vm.Summary.QuickStats.OverallCpuUsage
+		records["cpu_demand"] = vm.Summary.QuickStats.OverallCpuDemand
+		records["memory_swapped"] = vm.Summary.QuickStats.SwappedMemory
+		records["uptime"] = vm.Summary.QuickStats.UptimeSeconds
 		records["storage_committed"] = vm.Summary.Storage.Committed
 		records["storage_uncommitted"] = vm.Summary.Storage.Uncommitted
-		records["max_cpu_usage"] = vm.Summary.Runtime.MaxCpuUsage
-		records["max_mem_usage"] = vm.Summary.Runtime.MaxMemoryUsage
-		records["num_cores_per_socket"] = vm.Config.Hardware.NumCoresPerSocket
+		records["cpu_entitlement"] = vm.Summary.Runtime.MaxCpuUsage
+		records["memory_entitlement"] = vm.Summary.Runtime.MaxMemoryUsage
+		records["cpu_cores_per_socket"] = vm.Config.Hardware.NumCoresPerSocket
 
-		acc.AddFields("vm_metrics", records, tags)
+		acc.AddFields("virtual_machine", records, tags)
 	}
 }
 
