@@ -46,7 +46,7 @@ func (v *VSphere) SampleConfig() string {
 	return sampleConfig
 }
 
-func (v *VSphere) GatherDatastoreMetrics(acc telegraf.Accumulator, ctx context.Context, c *govmomi.Client, pc *property.Collector, dss []*object.Datastore) {
+func (v *VSphere) gatherDatastoreMetrics(acc telegraf.Accumulator, ctx context.Context, c *govmomi.Client, pc *property.Collector, dss []*object.Datastore) {
 	// Convert datastores into list of references
 	var refs []types.ManagedObjectReference
 	for _, ds := range dss {
@@ -76,7 +76,7 @@ func (v *VSphere) GatherDatastoreMetrics(acc telegraf.Accumulator, ctx context.C
 	}
 }
 
-func (v *VSphere) GatherVMMetrics(acc telegraf.Accumulator, ctx context.Context, c *govmomi.Client, pc *property.Collector, vms []*object.VirtualMachine) {
+func (v *VSphere) gatherVMMetrics(acc telegraf.Accumulator, ctx context.Context, c *govmomi.Client, pc *property.Collector, vms []*object.VirtualMachine) {
 	// Convert datastores into list of references
 	var refs []types.ManagedObjectReference
 	for _, vm := range vms {
@@ -156,14 +156,14 @@ func (v *VSphere) Gather(acc telegraf.Accumulator) error {
 		return err
 	}
 
-	v.GatherDatastoreMetrics(acc, ctx, c, pc, dss)
+	v.gatherDatastoreMetrics(acc, ctx, c, pc, dss)
 
 	// Find virtual machines in datacenter
 	vms, err := f.VirtualMachineList(ctx, "*")
 	if err != nil {
 		return err
 	}
-	v.GatherVMMetrics(acc, ctx, c, pc, vms)
+	v.gatherVMMetrics(acc, ctx, c, pc, vms)
 
 	return nil
 }
