@@ -65,10 +65,12 @@ func (v *VSphere) gatherDatastoreMetrics(acc telegraf.Accumulator, ctx context.C
 		tags := make(map[string]string)
 
 		tags["name"] = ds.Summary.Name
-		records["type"] = ds.Summary.Type
 
+		records["type"] = ds.Summary.Type
 		records["capacity"] = ds.Summary.Capacity
 		records["free_space"] = ds.Summary.FreeSpace
+		records["uncommitted_space"] = ds.Summary.Uncommitted
+
 
 		acc.AddFields("datastore", records, tags)
 	}
