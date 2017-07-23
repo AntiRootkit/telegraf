@@ -17,10 +17,12 @@ import (
 )
 
 type VSphere struct {
-	Server   string `json:"server"`
-	Username string `json:"username"`
-	Password string `json:"password"`
-	Insecure bool   `json:"insecure"`
+	Server          string `json:"server"`
+	Username        string `json:"username"`
+	Password        string `json:"password"`
+	Insecure        bool   `json:"insecure"`
+	Datastores      []string   `json:"datastores"`
+	VirtualMachines []string   `json:"virtual_machines"`
 }
 
 var sampleConfig = `
@@ -36,6 +38,12 @@ var sampleConfig = `
 
   ## Do not validate server's TLS certificate
   # insecure =  true
+
+  ## Datastore name patterns
+  datastores = ["*"]
+
+  ## Virtual machine name patterns
+  virtual_machines = ["*"]
 `
 
 func (v *VSphere) Description() string {
@@ -155,24 +163,26 @@ func (v *VSphere) Gather(acc telegraf.Accumulator) error {
 
 	pc := property.DefaultCollector(c.Client)
 
-	dss, err := f.DatastoreList(ctx, "*")
-	if err != nil {
-		return err
+	for _, ds := range v.Datastores {
+		dss, err := f.DatastoreList(ctx, ds)
+		if err != nil {
+			return err
+		}
+		err = v.gatherDatastoreMetrics(acc, ctx, c, pc, dss)
+		if err != nil {
+			return err
+		}
 	}
 
-	err = v.gatherDatastoreMetrics(acc, ctx, c, pc, dss)
-	if err != nil {
-		return err
-	}
-
-	// Find virtual machines in datacenter
-	vms, err := f.VirtualMachineList(ctx, "*")
-	if err != nil {
-		return err
-	}
-	err = v.gatherVMMetrics(acc, ctx, c, pc, vms)
-	if err != nil {
-		return err
+	for _, vm := range v.VirtualMachines {
+		vms, err := f.VirtualMachineList(ctx, vm)
+		if err != nil {
+			return err
+		}
+		err = v.gatherVMMetrics(acc, ctx, c, pc, vms)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
