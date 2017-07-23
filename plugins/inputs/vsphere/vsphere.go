@@ -66,7 +66,6 @@ func (v *VSphere) gatherDatastoreMetrics(acc telegraf.Accumulator, ctx context.C
 
 		tags["name"] = ds.Summary.Name
 		tags["type"] = ds.Summary.Type
-		tags["url"] = ds.Summary.Url
 
 		records["capacity"] = ds.Summary.Capacity
 		records["free_space"] = ds.Summary.FreeSpace
@@ -100,7 +99,6 @@ func (v *VSphere) gatherVMMetrics(acc telegraf.Accumulator, ctx context.Context,
 		tags["guest_os_name"] = vm.Config.GuestFullName
 		tags["connection_state"] = string(vm.Summary.Runtime.ConnectionState)
 		tags["health_status"] = string(vm.Summary.OverallStatus)
-		tags["vm_path_name"] = vm.Summary.Config.VmPathName
 		tags["ip_address"] = vm.Summary.Guest.IpAddress
 		tags["hostname"] = vm.Summary.Guest.HostName
 		tags["guest_os_id"] = vm.Config.GuestId
