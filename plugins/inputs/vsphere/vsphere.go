@@ -46,7 +46,7 @@ func (v *VSphere) SampleConfig() string {
 	return sampleConfig
 }
 
-func (v *VSphere) gatherDatastoreMetrics(acc telegraf.Accumulator, ctx context.Context, c *govmomi.Client, pc *property.Collector, dss []*object.Datastore) {
+func (v *VSphere) gatherDatastoreMetrics(acc telegraf.Accumulator, ctx context.Context, c *govmomi.Client, pc *property.Collector, dss []*object.Datastore) error {
 	// Convert datastores into list of references
 	var refs []types.ManagedObjectReference
 	for _, ds := range dss {
@@ -57,11 +57,10 @@ func (v *VSphere) gatherDatastoreMetrics(acc telegraf.Accumulator, ctx context.C
 	var dst []mo.Datastore
 	err := pc.Retrieve(ctx, refs, []string{"summary"}, &dst)
 	if err != nil {
-		panic(err)
+		return(err)
 	}
 
 	for _, ds := range dst {
-
 		records := make(map[string]interface{})
 		tags := make(map[string]string)
 
@@ -74,9 +73,11 @@ func (v *VSphere) gatherDatastoreMetrics(acc telegraf.Accumulator, ctx context.C
 
 		acc.AddFields("datastore", records, tags)
 	}
+
+	return nil
 }
 
-func (v *VSphere) gatherVMMetrics(acc telegraf.Accumulator, ctx context.Context, c *govmomi.Client, pc *property.Collector, vms []*object.VirtualMachine) {
+func (v *VSphere) gatherVMMetrics(acc telegraf.Accumulator, ctx context.Context, c *govmomi.Client, pc *property.Collector, vms []*object.VirtualMachine) error {
 	// Convert datastores into list of references
 	var refs []types.ManagedObjectReference
 	for _, vm := range vms {
@@ -87,7 +88,7 @@ func (v *VSphere) gatherVMMetrics(acc telegraf.Accumulator, ctx context.Context,
 	var vmt []mo.VirtualMachine
 	err := pc.Retrieve(ctx, refs, []string{"name", "config", "summary"}, &vmt)
 	if err != nil {
-		panic(err)
+		return(err)
 	}
 
 	for _, vm := range vmt {
@@ -121,6 +122,8 @@ func (v *VSphere) gatherVMMetrics(acc telegraf.Accumulator, ctx context.Context,
 
 		acc.AddFields("virtual_machine", records, tags)
 	}
+
+	return nil
 }
 
 func (v *VSphere) Gather(acc telegraf.Accumulator) error {
@@ -156,14 +159,20 @@ func (v *VSphere) Gather(acc telegraf.Accumulator) error {
 		return err
 	}
 
-	v.gatherDatastoreMetrics(acc, ctx, c, pc, dss)
+	err = v.gatherDatastoreMetrics(acc, ctx, c, pc, dss)
+	if err != nil {
+		return err
+	}
 
 	// Find virtual machines in datacenter
 	vms, err := f.VirtualMachineList(ctx, "*")
 	if err != nil {
 		return err
 	}
-	v.gatherVMMetrics(acc, ctx, c, pc, vms)
+	err = v.gatherVMMetrics(acc, ctx, c, pc, vms)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
