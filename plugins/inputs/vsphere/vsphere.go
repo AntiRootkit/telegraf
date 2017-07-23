@@ -65,7 +65,7 @@ func (v *VSphere) gatherDatastoreMetrics(acc telegraf.Accumulator, ctx context.C
 		tags := make(map[string]string)
 
 		tags["name"] = ds.Summary.Name
-		tags["type"] = ds.Summary.Type
+		records["type"] = ds.Summary.Type
 
 		records["capacity"] = ds.Summary.Capacity
 		records["free_space"] = ds.Summary.FreeSpace
@@ -96,13 +96,13 @@ func (v *VSphere) gatherVMMetrics(acc telegraf.Accumulator, ctx context.Context,
 		tags := make(map[string]string)
 
 		tags["name"] = vm.Name
-		tags["guest_os_name"] = vm.Config.GuestFullName
-		tags["connection_state"] = string(vm.Summary.Runtime.ConnectionState)
-		tags["health_status"] = string(vm.Summary.OverallStatus)
-		tags["ip_address"] = vm.Summary.Guest.IpAddress
+		records["guest_os_name"] = vm.Config.GuestFullName
+		records["connection_state"] = string(vm.Summary.Runtime.ConnectionState)
+		records["health_status"] = string(vm.Summary.OverallStatus)
+		records["ip_address"] = vm.Summary.Guest.IpAddress
 		tags["hostname"] = vm.Summary.Guest.HostName
-		tags["guest_os_id"] = vm.Config.GuestId
-		tags["guest_tools_running"] = vm.Summary.Guest.ToolsRunningStatus
+		records["guest_os_id"] = vm.Config.GuestId
+		records["guest_tools_running"] = vm.Summary.Guest.ToolsRunningStatus
 
 		records["memory_granted"] = vm.Config.Hardware.MemoryMB
 		records["cpu_sockets"] = vm.Config.Hardware.NumCPU
