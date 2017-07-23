@@ -98,14 +98,14 @@ func (v *VSphere) gatherVMMetrics(acc telegraf.Accumulator, ctx context.Context,
 		tags := make(map[string]string)
 
 		tags["name"] = vm.Name
+		tags["hostname"] = vm.Summary.Guest.HostName
+
 		records["guest_os_name"] = vm.Config.GuestFullName
 		records["connection_state"] = string(vm.Summary.Runtime.ConnectionState)
 		records["health_status"] = string(vm.Summary.OverallStatus)
 		records["ip_address"] = vm.Summary.Guest.IpAddress
-		tags["hostname"] = vm.Summary.Guest.HostName
 		records["guest_os_id"] = vm.Config.GuestId
 		records["guest_tools_running"] = vm.Summary.Guest.ToolsRunningStatus
-
 		records["memory_granted"] = vm.Config.Hardware.MemoryMB
 		records["cpu_sockets"] = vm.Config.Hardware.NumCPU
 		records["memory_host_consumed"] = vm.Summary.QuickStats.HostMemoryUsage
@@ -113,6 +113,7 @@ func (v *VSphere) gatherVMMetrics(acc telegraf.Accumulator, ctx context.Context,
 		records["cpu_usage"] = vm.Summary.QuickStats.OverallCpuUsage
 		records["cpu_demand"] = vm.Summary.QuickStats.OverallCpuDemand
 		records["memory_swapped"] = vm.Summary.QuickStats.SwappedMemory
+		records["memory_ballooned"] = vm.Summary.QuickStats.BalloonedMemory
 		records["uptime"] = vm.Summary.QuickStats.UptimeSeconds
 		records["storage_committed"] = vm.Summary.Storage.Committed
 		records["storage_uncommitted"] = vm.Summary.Storage.Uncommitted
