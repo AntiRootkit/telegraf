@@ -86,6 +86,17 @@ func (v *VSphere) Gather(acc telegraf.Accumulator) error {
 
 	collector := property.DefaultCollector(client.Client)
 
+	for _, name := range v.Hosts {
+		hosts, err := finder.HostSystemList(ctx, name)
+		if err != nil {
+			return err
+		}
+		err = v.gatherHostMetrics(acc, ctx, client, collector, hosts)
+		if err != nil {
+			return err
+		}
+	}
+
 	for _, name := range v.Datastores {
 		datastores, err := finder.DatastoreList(ctx, name)
 		if err != nil {
@@ -103,17 +114,6 @@ func (v *VSphere) Gather(acc telegraf.Accumulator) error {
 			return err
 		}
 		err = v.gatherVMMetrics(acc, ctx, client, collector, vms)
-		if err != nil {
-			return err
-		}
-	}
-
-	for _, name := range v.Hosts {
-		hosts, err := finder.HostSystemList(ctx, name)
-		if err != nil {
-			return err
-		}
-		err = v.gatherHostMetrics(acc, ctx, client, collector, hosts)
 		if err != nil {
 			return err
 		}
