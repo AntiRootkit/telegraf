@@ -23,6 +23,7 @@ type VSphere struct {
 	Insecure        bool   `json:"insecure"`
 	Datastores      []string   `json:"datastores"`
 	VirtualMachines []string   `json:"virtual_machines"`
+	Hosts           []string   `json:"hosts"`
 }
 
 var sampleConfig = `
@@ -44,6 +45,9 @@ var sampleConfig = `
 
   ## Virtual machine name patterns
   virtual_machines = ["*"]
+
+  ## Host name patterns
+  hosts = ["*"]
 `
 
 func (v *VSphere) Description() string {
@@ -65,7 +69,7 @@ func (v *VSphere) gatherDatastoreMetrics(acc telegraf.Accumulator, ctx context.C
 	var dst []mo.Datastore
 	err := pc.Retrieve(ctx, refs, []string{"summary"}, &dst)
 	if err != nil {
-		return(err)
+		return (err)
 	}
 
 	for _, ds := range dst {
@@ -78,7 +82,6 @@ func (v *VSphere) gatherDatastoreMetrics(acc telegraf.Accumulator, ctx context.C
 		records["capacity"] = ds.Summary.Capacity
 		records["free_space"] = ds.Summary.FreeSpace
 		records["uncommitted_space"] = ds.Summary.Uncommitted
-
 
 		acc.AddFields("datastore", records, tags)
 	}
@@ -97,7 +100,7 @@ func (v *VSphere) gatherVMMetrics(acc telegraf.Accumulator, ctx context.Context,
 	var vmt []mo.VirtualMachine
 	err := pc.Retrieve(ctx, refs, []string{"name", "config", "summary"}, &vmt)
 	if err != nil {
-		return(err)
+		return (err)
 	}
 
 	for _, vm := range vmt {
@@ -130,6 +133,42 @@ func (v *VSphere) gatherVMMetrics(acc telegraf.Accumulator, ctx context.Context,
 		records["cpu_cores_per_socket"] = vm.Config.Hardware.NumCoresPerSocket
 
 		acc.AddFields("virtual_machine", records, tags)
+	}
+
+	return nil
+}
+
+func (v *VSphere) gatherHostMetrics(acc telegraf.Accumulator, ctx context.Context, c *govmomi.Client, pc *property.Collector, hosts []*object.HostSystem) error {
+	var refs []types.ManagedObjectReference
+	for _, host := range hosts {
+		refs = append(refs, host.Reference())
+	}
+
+	var hostObjects []mo.HostSystem
+	err := pc.Retrieve(ctx, refs, []string{"name", "summary"}, &hostObjects)
+	if err != nil {
+		return (err)
+	}
+
+	for _, host := range hostObjects {
+
+		records := make(map[string]interface{})
+		tags := make(map[string]string)
+
+		tags["name"] = host.Name
+
+		records["connection_state"] = host.Summary.Runtime.ConnectionState
+		records["health_status"] = string(host.Summary.OverallStatus)
+
+		records["cpu_cores"] = host.Summary.Hardware.NumCpuCores
+		records["cpu_speed"] = host.Summary.Hardware.CpuMhz
+		records["cpu_usage"] = host.Summary.QuickStats.OverallCpuUsage
+
+		records["memory_granted"] = host.Summary.Hardware.MemorySize / 1024 / 1024
+		records["memory_usage"] = host.Summary.QuickStats.OverallMemoryUsage
+
+
+		acc.AddFields("host", records, tags)
 	}
 
 	return nil
@@ -180,6 +219,17 @@ func (v *VSphere) Gather(acc telegraf.Accumulator) error {
 			return err
 		}
 		err = v.gatherVMMetrics(acc, ctx, c, pc, vms)
+		if err != nil {
+			return err
+		}
+	}
+
+	for _, hostnamePattern := range v.Hosts {
+		hosts, err := f.HostSystemList(ctx, hostnamePattern)
+		if err != nil {
+			return err
+		}
+		err = v.gatherHostMetrics(acc, ctx, c, pc, hosts)
 		if err != nil {
 			return err
 		}
