@@ -132,7 +132,6 @@ func (v *VSphere) gatherVMMetrics(acc telegraf.Accumulator, ctx context.Context,
 		records["memory_swapped"] = vm.Summary.QuickStats.SwappedMemory
 		records["memory_ballooned"] = vm.Summary.QuickStats.BalloonedMemory
 
-		records["uptime"] = vm.Summary.QuickStats.UptimeSeconds
 		records["storage_committed"] = vm.Summary.Storage.Committed
 		records["storage_uncommitted"] = vm.Summary.Storage.Uncommitted
 
