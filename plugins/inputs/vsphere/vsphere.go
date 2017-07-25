@@ -58,6 +58,106 @@ func (v *VSphere) SampleConfig() string {
 	return sampleConfig
 }
 
+func (v *VSphere) Gather(acc telegraf.Accumulator) error {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// Parse URL from string
+	u, err := url.Parse(fmt.Sprintf("https://%s:%s@%s/sdk", v.Username, v.Password, v.Server))
+	if err != nil {
+		return err
+	}
+
+	// Connect and log in to ESX or vCenter
+	c, err := govmomi.NewClient(ctx, u, v.Insecure)
+	if err != nil {
+		return err
+	}
+	f := find.NewFinder(c.Client, true)
+
+	// Find one and only datacenter
+	dc, err := f.DefaultDatacenter(ctx)
+	if err != nil {
+		return err
+	}
+
+	// Make future calls local to this datacenter
+	f.SetDatacenter(dc)
+
+	pc := property.DefaultCollector(c.Client)
+
+	for _, ds := range v.Datastores {
+		dss, err := f.DatastoreList(ctx, ds)
+		if err != nil {
+			return err
+		}
+		err = v.gatherDatastoreMetrics(acc, ctx, c, pc, dss)
+		if err != nil {
+			return err
+		}
+	}
+
+	for _, vm := range v.VirtualMachines {
+		vms, err := f.VirtualMachineList(ctx, vm)
+		if err != nil {
+			return err
+		}
+		err = v.gatherVMMetrics(acc, ctx, c, pc, vms)
+		if err != nil {
+			return err
+		}
+	}
+
+	for _, hostnamePattern := range v.Hosts {
+		hosts, err := f.HostSystemList(ctx, hostnamePattern)
+		if err != nil {
+			return err
+		}
+		err = v.gatherHostMetrics(acc, ctx, c, pc, hosts)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (v *VSphere) gatherHostMetrics(acc telegraf.Accumulator, ctx context.Context, c *govmomi.Client, pc *property.Collector, hosts []*object.HostSystem) error {
+	var refs []types.ManagedObjectReference
+	for _, host := range hosts {
+		refs = append(refs, host.Reference())
+	}
+
+	var hostObjects []mo.HostSystem
+	err := pc.Retrieve(ctx, refs, []string{"name", "summary"}, &hostObjects)
+	if err != nil {
+		return (err)
+	}
+
+	for _, host := range hostObjects {
+
+		records := make(map[string]interface{})
+		tags := make(map[string]string)
+
+		tags["name"] = host.Name
+
+		records["connection_state"] = host.Summary.Runtime.ConnectionState
+		records["health_status"] = string(host.Summary.OverallStatus)
+
+		records["cpu_cores"] = host.Summary.Hardware.NumCpuCores
+		records["cpu_speed"] = host.Summary.Hardware.CpuMhz
+		records["cpu_usage"] = host.Summary.QuickStats.OverallCpuUsage
+
+		records["memory_granted"] = host.Summary.Hardware.MemorySize / 1024 / 1024
+		records["memory_usage"] = host.Summary.QuickStats.OverallMemoryUsage
+
+
+		acc.AddFields("host", records, tags)
+	}
+
+	return nil
+}
+
 func (v *VSphere) gatherDatastoreMetrics(acc telegraf.Accumulator, ctx context.Context, c *govmomi.Client, pc *property.Collector, dss []*object.Datastore) error {
 	// Convert datastores into list of references
 	var refs []types.ManagedObjectReference
@@ -136,106 +236,6 @@ func (v *VSphere) gatherVMMetrics(acc telegraf.Accumulator, ctx context.Context,
 		records["storage_uncommitted"] = vm.Summary.Storage.Uncommitted
 
 		acc.AddFields("virtual_machine", records, tags)
-	}
-
-	return nil
-}
-
-func (v *VSphere) gatherHostMetrics(acc telegraf.Accumulator, ctx context.Context, c *govmomi.Client, pc *property.Collector, hosts []*object.HostSystem) error {
-	var refs []types.ManagedObjectReference
-	for _, host := range hosts {
-		refs = append(refs, host.Reference())
-	}
-
-	var hostObjects []mo.HostSystem
-	err := pc.Retrieve(ctx, refs, []string{"name", "summary"}, &hostObjects)
-	if err != nil {
-		return (err)
-	}
-
-	for _, host := range hostObjects {
-
-		records := make(map[string]interface{})
-		tags := make(map[string]string)
-
-		tags["name"] = host.Name
-
-		records["connection_state"] = host.Summary.Runtime.ConnectionState
-		records["health_status"] = string(host.Summary.OverallStatus)
-
-		records["cpu_cores"] = host.Summary.Hardware.NumCpuCores
-		records["cpu_speed"] = host.Summary.Hardware.CpuMhz
-		records["cpu_usage"] = host.Summary.QuickStats.OverallCpuUsage
-
-		records["memory_granted"] = host.Summary.Hardware.MemorySize / 1024 / 1024
-		records["memory_usage"] = host.Summary.QuickStats.OverallMemoryUsage
-
-
-		acc.AddFields("host", records, tags)
-	}
-
-	return nil
-}
-
-func (v *VSphere) Gather(acc telegraf.Accumulator) error {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	// Parse URL from string
-	u, err := url.Parse(fmt.Sprintf("https://%s:%s@%s/sdk", v.Username, v.Password, v.Server))
-	if err != nil {
-		return err
-	}
-
-	// Connect and log in to ESX or vCenter
-	c, err := govmomi.NewClient(ctx, u, v.Insecure)
-	if err != nil {
-		return err
-	}
-	f := find.NewFinder(c.Client, true)
-
-	// Find one and only datacenter
-	dc, err := f.DefaultDatacenter(ctx)
-	if err != nil {
-		return err
-	}
-
-	// Make future calls local to this datacenter
-	f.SetDatacenter(dc)
-
-	pc := property.DefaultCollector(c.Client)
-
-	for _, ds := range v.Datastores {
-		dss, err := f.DatastoreList(ctx, ds)
-		if err != nil {
-			return err
-		}
-		err = v.gatherDatastoreMetrics(acc, ctx, c, pc, dss)
-		if err != nil {
-			return err
-		}
-	}
-
-	for _, vm := range v.VirtualMachines {
-		vms, err := f.VirtualMachineList(ctx, vm)
-		if err != nil {
-			return err
-		}
-		err = v.gatherVMMetrics(acc, ctx, c, pc, vms)
-		if err != nil {
-			return err
-		}
-	}
-
-	for _, hostnamePattern := range v.Hosts {
-		hosts, err := f.HostSystemList(ctx, hostnamePattern)
-		if err != nil {
-			return err
-		}
-		err = v.gatherHostMetrics(acc, ctx, c, pc, hosts)
-		if err != nil {
-			return err
-		}
 	}
 
 	return nil
