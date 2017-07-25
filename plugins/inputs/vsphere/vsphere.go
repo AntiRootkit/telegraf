@@ -21,9 +21,9 @@ type VSphere struct {
 	Username        string `json:"username"`
 	Password        string `json:"password"`
 	Insecure        bool   `json:"insecure"`
+	Hosts           []string   `json:"hosts"`
 	Datastores      []string   `json:"datastores"`
 	VirtualMachines []string   `json:"virtual_machines"`
-	Hosts           []string   `json:"hosts"`
 }
 
 var sampleConfig = `
@@ -40,14 +40,14 @@ var sampleConfig = `
   ## Do not validate server's TLS certificate
   # insecure =  true
 
+  ## Host name patterns
+  # hosts = ["*"]
+
   ## Datastore name patterns
-  datastores = ["*"]
+  # datastores = ["*"]
 
   ## Virtual machine name patterns
-  virtual_machines = ["*"]
-
-  ## Host name patterns
-  hosts = ["*"]
+  # virtual_machines = ["*"]
 `
 
 func (v *VSphere) Description() string {
@@ -112,25 +112,29 @@ func (v *VSphere) gatherVMMetrics(acc telegraf.Accumulator, ctx context.Context,
 		tags["hostname"] = vm.Summary.Guest.HostName
 
 		records["guest_os_name"] = vm.Config.GuestFullName
+		records["guest_os_id"] = vm.Config.GuestId
+		records["ip_address"] = vm.Summary.Guest.IpAddress
+
 		records["connection_state"] = string(vm.Summary.Runtime.ConnectionState)
 		records["health_status"] = string(vm.Summary.OverallStatus)
-		records["ip_address"] = vm.Summary.Guest.IpAddress
-		records["guest_os_id"] = vm.Config.GuestId
 		records["guest_tools_running"] = vm.Summary.Guest.ToolsRunningStatus
-		records["memory_granted"] = vm.Config.Hardware.MemoryMB
+
 		records["cpu_sockets"] = vm.Config.Hardware.NumCPU
-		records["memory_host_consumed"] = vm.Summary.QuickStats.HostMemoryUsage
-		records["memory_guest_active"] = vm.Summary.QuickStats.GuestMemoryUsage
+		records["cpu_cores_per_socket"] = vm.Config.Hardware.NumCoresPerSocket
+		records["cpu_entitlement"] = vm.Summary.Runtime.MaxCpuUsage
 		records["cpu_usage"] = vm.Summary.QuickStats.OverallCpuUsage
 		records["cpu_demand"] = vm.Summary.QuickStats.OverallCpuDemand
+
+		records["memory_granted"] = vm.Config.Hardware.MemoryMB
+		records["memory_entitlement"] = vm.Summary.Runtime.MaxMemoryUsage
+		records["memory_host_consumed"] = vm.Summary.QuickStats.HostMemoryUsage
+		records["memory_guest_active"] = vm.Summary.QuickStats.GuestMemoryUsage
 		records["memory_swapped"] = vm.Summary.QuickStats.SwappedMemory
 		records["memory_ballooned"] = vm.Summary.QuickStats.BalloonedMemory
+
 		records["uptime"] = vm.Summary.QuickStats.UptimeSeconds
 		records["storage_committed"] = vm.Summary.Storage.Committed
 		records["storage_uncommitted"] = vm.Summary.Storage.Uncommitted
-		records["cpu_entitlement"] = vm.Summary.Runtime.MaxCpuUsage
-		records["memory_entitlement"] = vm.Summary.Runtime.MaxMemoryUsage
-		records["cpu_cores_per_socket"] = vm.Config.Hardware.NumCoresPerSocket
 
 		acc.AddFields("virtual_machine", records, tags)
 	}
