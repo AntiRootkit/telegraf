@@ -82,7 +82,6 @@ func (v *VSphere) Gather(acc telegraf.Accumulator) error {
 		return err
 	}
 	finder.SetDatacenter(dc)
-	collector := property.DefaultCollector(client.Client)
 
 	var wg sync.WaitGroup
 
@@ -98,7 +97,7 @@ func (v *VSphere) Gather(acc telegraf.Accumulator) error {
 			}
 
 
-			err = v.gatherHostMetrics(acc, ctx, client, collector, hosts)
+			err = v.gatherHostMetrics(acc, ctx, client, hosts)
 			if err != nil {
 				acc.AddError(fmt.Errorf("Cannot read host properties for '%s': %s", name, err))
 				return
@@ -116,7 +115,7 @@ func (v *VSphere) Gather(acc telegraf.Accumulator) error {
 				acc.AddError(fmt.Errorf("Cannot read datastore list for '%s': %s", name, err))
 				return
 			}
-			err = v.gatherDatastoreMetrics(acc, ctx, client, collector, datastores)
+			err = v.gatherDatastoreMetrics(acc, ctx, client, datastores)
 			if err != nil {
 				acc.AddError(fmt.Errorf("Cannot read datastore properties for '%s': %s", name, err))
 				return
@@ -134,7 +133,7 @@ func (v *VSphere) Gather(acc telegraf.Accumulator) error {
 				acc.AddError(fmt.Errorf("Cannot read vm list for '%s': %s", name, err))
 				return
 			}
-			err = v.gatherVMMetrics(acc, ctx, client, collector, vms)
+			err = v.gatherVMMetrics(acc, ctx, client, vms)
 			if err != nil {
 				acc.AddError(fmt.Errorf("Cannot read vm properties for '%s': %s", name, err))
 				return
@@ -146,12 +145,13 @@ func (v *VSphere) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (v *VSphere) gatherHostMetrics(acc telegraf.Accumulator, ctx context.Context, client *govmomi.Client, collector *property.Collector, hosts []*object.HostSystem) error {
+func (v *VSphere) gatherHostMetrics(acc telegraf.Accumulator, ctx context.Context, client *govmomi.Client, hosts []*object.HostSystem) error {
 	var refs []types.ManagedObjectReference
 	for _, obj := range hosts {
 		refs = append(refs, obj.Reference())
 	}
 
+	collector := property.DefaultCollector(client.Client)
 	var results []mo.HostSystem
 	err := collector.Retrieve(ctx, refs, []string{"name", "summary"}, &results)
 	if err != nil {
@@ -182,14 +182,14 @@ func (v *VSphere) gatherHostMetrics(acc telegraf.Accumulator, ctx context.Contex
 	return nil
 }
 
-func (v *VSphere) gatherDatastoreMetrics(acc telegraf.Accumulator, ctx context.Context, client *govmomi.Client, collector *property.Collector, datastores []*object.Datastore) error {
+func (v *VSphere) gatherDatastoreMetrics(acc telegraf.Accumulator, ctx context.Context, client *govmomi.Client, datastores []*object.Datastore) error {
 	// Convert datastores into list of references
 	var refs []types.ManagedObjectReference
 	for _, obj := range datastores {
 		refs = append(refs, obj.Reference())
 	}
 
-	// Retrieve summary property for all datastores
+	collector := property.DefaultCollector(client.Client)
 	var results []mo.Datastore
 	err := collector.Retrieve(ctx, refs, []string{"summary"}, &results)
 	if err != nil {
@@ -213,12 +213,13 @@ func (v *VSphere) gatherDatastoreMetrics(acc telegraf.Accumulator, ctx context.C
 	return nil
 }
 
-func (v *VSphere) gatherVMMetrics(acc telegraf.Accumulator, ctx context.Context, client *govmomi.Client, collector *property.Collector, vms []*object.VirtualMachine) error {
+func (v *VSphere) gatherVMMetrics(acc telegraf.Accumulator, ctx context.Context, client *govmomi.Client, vms []*object.VirtualMachine) error {
 	var refs []types.ManagedObjectReference
 	for _, obj := range vms {
 		refs = append(refs, obj.Reference())
 	}
 
+	collector := property.DefaultCollector(client.Client)
 	var results []mo.VirtualMachine
 	err := collector.Retrieve(ctx, refs, []string{"name", "config", "summary"}, &results)
 	if err != nil {
