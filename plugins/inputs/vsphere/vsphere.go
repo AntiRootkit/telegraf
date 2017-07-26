@@ -14,7 +14,6 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"sync"
 )
 
 type VSphere struct {
@@ -83,65 +82,48 @@ func (v *VSphere) Gather(acc telegraf.Accumulator) error {
 	}
 	finder.SetDatacenter(dc)
 
-	var wg sync.WaitGroup
-
 	for _, name := range v.Hosts {
-		wg.Add(1)
-		go func(name string) {
-			defer wg.Done()
+		hosts, err := finder.HostSystemList(ctx, name)
+		if err != nil {
+			acc.AddError(fmt.Errorf("Cannot read host list for '%s': %s", name, err))
+			continue
+		}
 
-			hosts, err := finder.HostSystemList(ctx, name)
-			if err != nil {
-				acc.AddError(fmt.Errorf("Cannot read host list for '%s': %s", name, err))
-				return
-			}
-
-
-			err = v.gatherHostMetrics(acc, ctx, client, hosts)
-			if err != nil {
-				acc.AddError(fmt.Errorf("Cannot read host properties for '%s': %s", name, err))
-				return
-			}
-		}(name)
+		err = v.gatherHostMetrics(acc, ctx, client, hosts)
+		if err != nil {
+			acc.AddError(fmt.Errorf("Cannot read host properties for '%s': %s", name, err))
+			continue
+		}
 	}
 
 	for _, name := range v.Datastores {
-		wg.Add(1)
-		go func(name string) {
-			defer wg.Done()
+		datastores, err := finder.DatastoreList(ctx, name)
+		if err != nil {
+			acc.AddError(fmt.Errorf("Cannot read datastore list for '%s': %s", name, err))
+			continue
+		}
 
-			datastores, err := finder.DatastoreList(ctx, name)
-			if err != nil {
-				acc.AddError(fmt.Errorf("Cannot read datastore list for '%s': %s", name, err))
-				return
-			}
-			err = v.gatherDatastoreMetrics(acc, ctx, client, datastores)
-			if err != nil {
-				acc.AddError(fmt.Errorf("Cannot read datastore properties for '%s': %s", name, err))
-				return
-			}
-		}(name)
+		err = v.gatherDatastoreMetrics(acc, ctx, client, datastores)
+		if err != nil {
+			acc.AddError(fmt.Errorf("Cannot read datastore properties for '%s': %s", name, err))
+			continue
+		}
 	}
 
 	for _, name := range v.VirtualMachines {
-		wg.Add(1)
-		go func(name string) {
-			defer wg.Done()
+		vms, err := finder.VirtualMachineList(ctx, name)
+		if err != nil {
+			acc.AddError(fmt.Errorf("Cannot read vm list for '%s': %s", name, err))
+			continue
+		}
 
-			vms, err := finder.VirtualMachineList(ctx, name)
-			if err != nil {
-				acc.AddError(fmt.Errorf("Cannot read vm list for '%s': %s", name, err))
-				return
-			}
-			err = v.gatherVMMetrics(acc, ctx, client, vms)
-			if err != nil {
-				acc.AddError(fmt.Errorf("Cannot read vm properties for '%s': %s", name, err))
-				return
-			}
-		}(name)
+		err = v.gatherVMMetrics(acc, ctx, client, vms)
+		if err != nil {
+			acc.AddError(fmt.Errorf("Cannot read vm properties for '%s': %s", name, err))
+			continue
+		}
 	}
 
-	wg.Wait()
 	return nil
 }
 
@@ -174,7 +156,6 @@ func (v *VSphere) gatherHostMetrics(acc telegraf.Accumulator, ctx context.Contex
 
 		records["memory_granted"] = host.Summary.Hardware.MemorySize / 1024 / 1024
 		records["memory_usage"] = host.Summary.QuickStats.OverallMemoryUsage
-
 
 		acc.AddFields("host", records, tags)
 	}
