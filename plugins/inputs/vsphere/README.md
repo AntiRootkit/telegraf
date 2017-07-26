@@ -2,25 +2,29 @@
 
 This plugin collects metrics from vCenter servers or standalone vSphere Hypervisor (ESXi) hosts.
 
+- Hosts 
+    - Health status
+    - CPU usage
+    - Memory usage
+- Datastores 
+    - Space usage
 - Virtual machines
+    - Health status
+    - Guest OS details
     - CPU usage
     - Memory usage
     - Storage usage
-    - Health status
-    - count (Running, stopped, total)
-- Datastores 
-    - Space usage
 
 ### Configuration:
 
 ```toml
 # Collect metrics from VMware vSphere
 [[inputs.vsphere]]
-  ## FQDN or an IP of a vCenter Server or ESX host
+  ## FQDN or an IP of a vCenter Server or ESXi host
   server = "vcenter.domain.com"
 
   ## A vSphere/ESX user
-  ## must have System.View and Performance.ModifyIntervals privileges
+  ## must have System.View privilege
   username = "root"
 
   ## Password
@@ -28,57 +32,74 @@ This plugin collects metrics from vCenter servers or standalone vSphere Hypervis
 
   ## Do not validate server's TLS certificate
   # insecure =  true
+
+  ## Host name patterns
+  # hosts = ["*"]
+
+  ## Datastore name patterns
+  # datastores = ["*"]
+
+  ## Virtual machine name patterns
+  # virtual_machines = ["*"]
 ```
 
 ### Measurements & Fields:
 
-Every effort was made to preserve the names based on the JSON response from the VSphere API.
-
-- vm_metrics:
-    - mem_mb
-    - num_cpu
-    - host_mem_usage
-    - guest_mem_usage
-    - overall_cpu_usage
-    - overall_cpu_demand
-    - swap_mem
-    - uptime_sec
-    - storage_committed
-    - storage_uncommitted
-    - max_cpu_usage
-    - max_mem_usage
-    - num_cores_per_socket
-  - ds_metrics:
-    - capacity
-    - freespace
+- host
+    - connection_state (string)
+    - health_status (string)
+    - cpu_cores (integer)
+    - cpu_speed (integer, MHz per core)
+    - cpu_usage (integer, MHz total)
+    - memory_granted (integer, MB)
+    - memory_usage (integer, MB)
+- datastore
+    - type (string)
+    - capacity (integer, bytes)
+    - free_space (integer, bytes)
+    - uncommitted_space (integer, bytes)
+- virtual_machine
+    - guest_os_name (string)
+    - guest_os_id (string)
+    - ip_address (string)
+    - connection_state (string)
+    - health_status (string)
+    - guest_tools_running (bool)
+    - cpu_sockets (integer)
+    - cpu_cores_per_socket  (integer)
+    - cpu_entitlement (integer, MHz)
+    - cpu_usage (integer, MHz)
+    - cpu_demand (integer, MHz)
+    - memory_granted (integer, MB)
+    - memory_entitlement (integer, MB)
+    - memory_host_consumed (integer, MB)
+    - memory_guest_active (integer, MB)
+    - memory_swapped (integer, MB)
+    - memory_ballooned (integer, MB)
+    - storage_committed (integer, bytes)
+    - storage_uncommitted (integer, bytes)
 
 ### Tags:
 
-- vm_metrics:
+- All measurements have the following tags:
     - name
-    - guest_full_name
-    - connection_state
-    - vm_path_name
-    - ip_address
+- `virtual_machine` has the following tags:
     - hostname
-    - guest_id
-    - is_guest_tools_running
-  - ds_metrics:
-    - name
-    - type
-    - url
 
+<!---
 ### Sample Queries:
 
 ```
 SELECT mean("host_mem_usage") FROM "vm_metrics" WHERE "name" =~ /^$VM$/ AND $timeFilter GROUP BY time($interval) fill(null) // Memory used
 SELECT mean("max_mem_usage") FROM "vm_metrics" WHERE "name" =~ /^$VM$/ AND $timeFilter GROUP BY time($interval) fill(null) // Max memory
 ```
+--->
 
 ### Example Output:
 
 ```
 $ ./telegraf -config telegraf.conf -input-filter vsphere -test
-ds_metrics,name=datastore1,type=VMFS,url=ds:///vmfs/volumes/565329ae-e9216057-0425-0cc47a6b4d7e/,host=f4a171794478 capacity=891474149376i,freespace=885013872640i 1492503065000000000
-vm_metrics,guest_id=ubuntu64Guest,guest_full_name=Ubuntu\ Linux\ (64-bit),overall_status=green,vm_path_name=[vsanDatastore]\ fa489858-d6e5-e81d-12ee-0cc47a6b5d06/vm-test.vmx,host=f4a171794478,name=vm-test,connection_state=connected,is_guest_tools_running=guestToolsNotRunning host_mem_usage=0i,guest_mem_usage=0i,storage_committed=3626449963i,max_cpu_usage=4598i,max_mem_usage=1024i,num_cores_per_socket=1i,storage_uncommitted=6209339392i,mem_mb=1024i,num_cpu=2i,overall_cpu_usage=0i,overall_cpu_demand=0i,swap_mem=0i,uptime_sec=0i 1492503067000000000
+host,name=esxi1.domain.com cpu_speed=2693i,cpu_usage=25134i,memory_granted=393137i,memory_usage=376990i,connection_state="connected",health_status="green",cpu_cores=16i 1501106147000000000
+datastore,name=ds1 type="VMFS",capacity=9895336214528i,free_space=1510909935616i,uncommitted_space=19212208096956i 1501107520000000000
+virtual_machine,name=vm1,hostname=vm1.domain.com ip_address="192.168.1.2",cpu_demand=43i,memory_host_consumed=8150i,memory_ballooned=0i,memory_entitlement=8192i,memory_swapped=0i,guest_os_id="ubuntu64Guest",connection_state="connected",health_status="green",guest_tools_running="guestToolsRunning",cpu_entitlement=2194i,cpu_sockets=1i,storage_uncommitted=4786750081i,storage_committed=57669734481i,guest_os_name="Ubuntu Linux (64-bit)",cpu_cores_per_socket=1i,cpu_usage=43i,memory_granted=8192i,memory_guest_active=737i 1501106028000000000
 ```
