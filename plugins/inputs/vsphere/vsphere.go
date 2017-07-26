@@ -184,7 +184,7 @@ func (v *VSphere) gatherDatastoreMetrics(acc telegraf.Accumulator, ctx context.C
 		tags["name"] = datastore.Summary.Name
 
 		records["type"] = datastore.Summary.Type
-		records["health_status"] = string(datastore.OverallStatus)
+		//records["health_status"] = datastore.OverallStatus
 
 		records["capacity"] = datastore.Summary.Capacity
 		records["free_space"] = datastore.Summary.FreeSpace
