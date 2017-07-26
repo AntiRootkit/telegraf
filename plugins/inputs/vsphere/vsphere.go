@@ -63,11 +63,11 @@ func (v *VSphere) Gather(acc telegraf.Accumulator) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// Parse URL from string
-	u, err := url.Parse(fmt.Sprintf("https://%s:%s@%s/sdk", v.Username, v.Password, v.Server))
+	u, err := url.Parse(fmt.Sprintf("https://%s/sdk", v.Server))
 	if err != nil {
 		return err
 	}
+	u.User = url.UserPassword(v.Username, v.Password)
 
 	// Connect and log in to ESX or vCenter
 	client, err := govmomi.NewClient(ctx, u, v.Insecure)
