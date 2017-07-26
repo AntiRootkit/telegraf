@@ -224,6 +224,7 @@ func (v *VSphere) gatherVMMetrics(acc telegraf.Accumulator, ctx context.Context,
 		records["connection_state"] = string(vm.Summary.Runtime.ConnectionState)
 		records["health_status"] = string(vm.Summary.OverallStatus)
 		records["guest_tools_running"] = vm.Summary.Guest.ToolsRunningStatus == "guestToolsRunning"
+		records["guest_tools_version"] = vm.Summary.Guest.ToolsVersionStatus2
 
 		records["cpu_sockets"] = vm.Config.Hardware.NumCPU
 		records["cpu_cores_per_socket"] = vm.Config.Hardware.NumCoresPerSocket
