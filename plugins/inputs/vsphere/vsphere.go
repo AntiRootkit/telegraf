@@ -186,9 +186,9 @@ func (v *VSphere) gatherDatastoreMetrics(acc telegraf.Accumulator, ctx context.C
 		records["type"] = datastore.Summary.Type
 		//records["health_status"] = datastore.OverallStatus
 
-		records["capacity"] = datastore.Summary.Capacity
-		records["free_space"] = datastore.Summary.FreeSpace
-		records["uncommitted_space"] = datastore.Summary.Uncommitted
+		records["capacity"] = datastore.Summary.Capacity / 1024 / 1024
+		records["free_space"] = datastore.Summary.FreeSpace / 1024 / 1024
+		records["uncommitted_space"] = datastore.Summary.Uncommitted / 1024 / 1024
 
 		acc.AddFields("datastore", records, tags)
 	}
@@ -238,8 +238,8 @@ func (v *VSphere) gatherVMMetrics(acc telegraf.Accumulator, ctx context.Context,
 		records["memory_swapped"] = vm.Summary.QuickStats.SwappedMemory
 		records["memory_ballooned"] = vm.Summary.QuickStats.BalloonedMemory
 
-		records["storage_committed"] = vm.Summary.Storage.Committed
-		records["storage_uncommitted"] = vm.Summary.Storage.Uncommitted
+		records["storage_committed"] = vm.Summary.Storage.Committed / 1024 / 1024
+		records["storage_uncommitted"] = vm.Summary.Storage.Uncommitted / 1024 / 1024
 
 		acc.AddFields("virtual_machine", records, tags)
 	}

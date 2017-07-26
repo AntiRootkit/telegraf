@@ -55,9 +55,9 @@ This plugin collects metrics from vCenter servers or standalone vSphere Hypervis
     - memory_usage (integer, MB)
 - datastore
     - type (string)
-    - capacity (integer, bytes)
-    - free_space (integer, bytes)
-    - uncommitted_space (integer, bytes)
+    - capacity (integer, MB)
+    - free_space (integer, MB)
+    - uncommitted_space (integer, MB)
 - virtual_machine
     - guest_os_name (string)
     - guest_os_id (string)
@@ -76,8 +76,8 @@ This plugin collects metrics from vCenter servers or standalone vSphere Hypervis
     - memory_guest_active (integer, MB)
     - memory_swapped (integer, MB)
     - memory_ballooned (integer, MB)
-    - storage_committed (integer, bytes)
-    - storage_uncommitted (integer, bytes)
+    - storage_committed (integer, MB)
+    - storage_uncommitted (integer, MB)
 
 ### Tags:
 
