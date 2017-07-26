@@ -14,6 +14,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	"sync"
 )
 
 type VSphere struct {
@@ -80,45 +81,68 @@ func (v *VSphere) Gather(acc telegraf.Accumulator) error {
 	if err != nil {
 		return err
 	}
-
-	// Make future calls local to this datacenter
 	finder.SetDatacenter(dc)
-
 	collector := property.DefaultCollector(client.Client)
 
+	var wg sync.WaitGroup
+
 	for _, name := range v.Hosts {
-		hosts, err := finder.HostSystemList(ctx, name)
-		if err != nil {
-			return err
-		}
-		err = v.gatherHostMetrics(acc, ctx, client, collector, hosts)
-		if err != nil {
-			return err
-		}
+		wg.Add(1)
+		go func(name string) {
+			defer wg.Done()
+
+			hosts, err := finder.HostSystemList(ctx, name)
+			if err != nil {
+				acc.AddError(fmt.Errorf("Cannot read host list for '%s': %s", name, err))
+				return
+			}
+
+
+			err = v.gatherHostMetrics(acc, ctx, client, collector, hosts)
+			if err != nil {
+				acc.AddError(fmt.Errorf("Cannot read host properties for '%s': %s", name, err))
+				return
+			}
+		}(name)
 	}
 
 	for _, name := range v.Datastores {
-		datastores, err := finder.DatastoreList(ctx, name)
-		if err != nil {
-			return err
-		}
-		err = v.gatherDatastoreMetrics(acc, ctx, client, collector, datastores)
-		if err != nil {
-			return err
-		}
+		wg.Add(1)
+		go func(name string) {
+			defer wg.Done()
+
+			datastores, err := finder.DatastoreList(ctx, name)
+			if err != nil {
+				acc.AddError(fmt.Errorf("Cannot read datastore list for '%s': %s", name, err))
+				return
+			}
+			err = v.gatherDatastoreMetrics(acc, ctx, client, collector, datastores)
+			if err != nil {
+				acc.AddError(fmt.Errorf("Cannot read datastore properties for '%s': %s", name, err))
+				return
+			}
+		}(name)
 	}
 
 	for _, name := range v.VirtualMachines {
-		vms, err := finder.VirtualMachineList(ctx, name)
-		if err != nil {
-			return err
-		}
-		err = v.gatherVMMetrics(acc, ctx, client, collector, vms)
-		if err != nil {
-			return err
-		}
+		wg.Add(1)
+		go func(name string) {
+			defer wg.Done()
+
+			vms, err := finder.VirtualMachineList(ctx, name)
+			if err != nil {
+				acc.AddError(fmt.Errorf("Cannot read vm list for '%s': %s", name, err))
+				return
+			}
+			err = v.gatherVMMetrics(acc, ctx, client, collector, vms)
+			if err != nil {
+				acc.AddError(fmt.Errorf("Cannot read vm properties for '%s': %s", name, err))
+				return
+			}
+		}(name)
 	}
 
+	wg.Wait()
 	return nil
 }
 
