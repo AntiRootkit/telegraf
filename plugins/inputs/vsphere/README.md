@@ -100,6 +100,6 @@ SELECT mean("max_mem_usage") FROM "vm_metrics" WHERE "name" =~ /^$VM$/ AND $time
 ```
 $ ./telegraf -config telegraf.conf -input-filter vsphere -test
 host,name=esxi1.domain.com cpu_speed=2693i,cpu_usage=25134i,memory_granted=393137i,memory_usage=376990i,connection_state="connected",health_status="green",cpu_cores=16i 1501106147000000000
-datastore,name=ds1 type="VMFS",capacity=9895336214528i,free_space=1510909935616i,uncommitted_space=19212208096956i 1501107520000000000
-virtual_machine,name=vm1,hostname=vm1.domain.com ip_address="192.168.1.2",cpu_demand=43i,memory_host_consumed=8150i,memory_ballooned=0i,memory_entitlement=8192i,memory_swapped=0i,guest_os_id="ubuntu64Guest",connection_state="connected",health_status="green",guest_tools_running="guestToolsRunning",cpu_entitlement=2194i,cpu_sockets=1i,storage_uncommitted=4786750081i,storage_committed=57669734481i,guest_os_name="Ubuntu Linux (64-bit)",cpu_cores_per_socket=1i,cpu_usage=43i,memory_granted=8192i,memory_guest_active=737i 1501106028000000000
+datastore,name=ds1 type="VMFS",capacity=9895336i,free_space=1510909i,uncommitted_space=19212208i 1501107520000000000
+virtual_machine,name=vm1,hostname=vm1.domain.com ip_address="192.168.1.2",cpu_demand=43i,memory_host_consumed=8150i,memory_ballooned=0i,memory_entitlement=8192i,memory_swapped=0i,guest_os_id="ubuntu64Guest",connection_state="connected",health_status="green",guest_tools_running=true,cpu_entitlement=2194i,cpu_sockets=1i,storage_uncommitted=4786i,storage_committed=57669i,guest_os_name="Ubuntu Linux (64-bit)",cpu_cores_per_socket=1i,cpu_usage=43i,memory_granted=8192i,memory_guest_active=737i 1501106028000000000
 ```
